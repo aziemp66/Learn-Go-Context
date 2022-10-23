@@ -3,6 +3,7 @@ package gocontext
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"testing"
 )
 
@@ -38,4 +39,34 @@ func TestContextWithValue(t *testing.T) {
 	fmt.Println(contextF.Value("c")) //dapat milik parent
 	fmt.Println(contextF.Value("b")) //tidak dapat, beda parent
 	fmt.Println(contextA.Value("b")) //tidak dapat mengambil child
+}
+
+func CreateCounter() chan int {
+	destination := make(chan int)
+
+	go func() {
+		defer close(destination)
+		counter := 1
+		for {
+			destination <- counter
+			counter++
+		}
+	}()
+
+	return destination
+}
+
+func TestWithCancel(t *testing.T) {
+	fmt.Println("Total Goroutine: ", runtime.NumGoroutine())
+
+	destination := CreateCounter()
+
+	for n := range destination {
+		fmt.Println("Counter: ", n)
+		if n == 10 {
+			break
+		}
+	}
+
+	fmt.Println("Final Goroutine: ", runtime.NumGoroutine())
 }
