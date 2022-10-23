@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestContext(t *testing.T) {
@@ -67,6 +68,48 @@ func TestWithCancel(t *testing.T) {
 			break
 		}
 	}
+
+	fmt.Println("Final Goroutine: ", runtime.NumGoroutine())
+}
+
+func CreateCounterWithContext(ctx context.Context) chan int {
+	destination := make(chan int)
+
+	go func() {
+		defer close(destination)
+		counter := 1
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				destination <- counter
+				counter++
+			}
+		}
+	}()
+
+	return destination
+}
+
+func TestWithCancelContext(t *testing.T) {
+	fmt.Println("Total Goroutine: ", runtime.NumGoroutine())
+	parent := context.Background()
+	ctx, cancel := context.WithCancel(parent)
+
+	destination := CreateCounterWithContext(ctx)
+
+	fmt.Println("Total Goroutine: ", runtime.NumGoroutine())
+
+	for n := range destination {
+		fmt.Println("Counter: ", n)
+		if n == 10 {
+			break
+		}
+	}
+	cancel() //mengirim sinyal ke context
+
+	time.Sleep(1 * time.Second)
 
 	fmt.Println("Final Goroutine: ", runtime.NumGoroutine())
 }
